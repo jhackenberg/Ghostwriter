@@ -80,13 +80,18 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 set(BOOST_ROOT ${GHOSTWRITER_BOOST_PATH})
 set(BOOST_LIBRARYDIR ${BOOST_ROOT}/lib)
-set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON)
 
+# Temporarily remove custom cmake module path so the vendored FindBoost.cmake
+# does not shadow modern Boost's own CMake config files.
+set(_SAVED_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
+set(CMAKE_MODULE_PATH "")
 find_package(
-  Boost 1.68.0 EXACT
-  COMPONENTS system
-  REQUIRED program_options)
+  Boost 1.68.0
+  REQUIRED
+  COMPONENTS program_options)
+set(CMAKE_MODULE_PATH ${_SAVED_CMAKE_MODULE_PATH})
 
 if(Boost_FOUND)
   include_directories(${Boost_INCLUDE_DIRS})
@@ -105,23 +110,19 @@ set(UCX_LIB_PATHS ${GHOSTWRITER_UCX_PATH}/lib)
 find_library(
   UCP_LIBRARIES
   NAMES ucp libucp
-  PATHS ${UCX_LIB_PATHS}
-  NO_DEFAULT_PATH)
+  PATHS ${UCX_LIB_PATHS})
 find_library(
   UCS_LIBRARIES
   NAMES ucs libucs
-  PATHS ${UCX_LIB_PATHS}
-  NO_DEFAULT_PATH)
+  PATHS ${UCX_LIB_PATHS})
 find_library(
   UCT_LIBRARIES
   NAMES uct libuct
-  PATHS ${UCX_LIB_PATHS}
-  NO_DEFAULT_PATH)
+  PATHS ${UCX_LIB_PATHS})
 find_path(
   UCX_INCLUDE_DIRS
   NAMES ucp/api/ucp.h
-  PATHS ${UCX_INCLUDE_PATHS}
-  NO_DEFAULT_PATH)
+  PATHS ${UCX_INCLUDE_PATHS})
 
 set(UCX_LIBRARIES ${UCP_LIBRARIES} ${UCS_LIBRARIES} ${UCT_LIBRARIES})
 
@@ -168,28 +169,29 @@ add_subdirectory(${FLATBUFFERS_SRC_DIR}
 # 2.8.11. target_link_libraries(own_project_target PRIVATE flatbuffers)
 
 
-# add LLVM libraries, set LLVM_* variables
+# add LLVM libraries, set LLVM_* variables (only needed for YSB builds)
+if(${GHOSTWRITER_BUILD_YSB_BENCHMARK} OR ${GHOSTWRITER_BUILD_YSB_LOCAL_RUNNER} OR ${GHOSTWRITER_BUILD_YSB_KAFKA_BENCHMARK})
+  set(ENV{LLVM_HOME} "${GHOSTWRITER_LLVM_PATH}/build")
+  message(STATUS "LLVM_HOME: $ENV{LLVM_HOME}")
+  set(ENV{PATH} "$ENV{LLVM_HOME}/bin:$ENV{PATH}")
+  set(LLVM_BUILD_DIR ${GHOSTWRITER_LLVM_PATH}/build)
+  find_package(LLVM 9.0 REQUIRED PATHS ${LLVM_HOME}../../)
+  if(NOT LLVM_FOUND)
+    message(FATAL_ERROR "LLVM not found in default locations or custom path (${GHOSTWRITER_LLVM_PATH}).")
+  endif()
+  message(STATUS "Found LLVM v${LLVM_PACKAGE_VERSION}")
+  # add Clang libraries
+  include(${LLVM_BUILD_DIR}/lib/cmake/clang/ClangTargets.cmake)
 
-set(ENV{LLVM_HOME} "${GHOSTWRITER_LLVM_PATH}/build")
-message(STATUS "LLVM_HOME: $ENV{LLVM_HOME}")
-set(ENV{PATH} "$ENV{LLVM_HOME}/bin:$ENV{PATH}")
-set(LLVM_BUILD_DIR ${GHOSTWRITER_LLVM_PATH}/build)
-find_package(LLVM 9.0 REQUIRED PATHS ${LLVM_HOME}../../)
-if(NOT LLVM_FOUND)
-  message(FATAL_ERROR "LLVM not found in default locations or custom path (${GHOSTWRITER_LLVM_PATH}).")
+  # find Clang source directory
+  if (EXISTS ${LLVM_BUILD_MAIN_SRC_DIR}/tools/clang)
+      set(CLANG_SRC_DIR_PREFIX tools) # sources in-tree (default build)
+  elseif (EXISTS ${LLVM_BUILD_MAIN_SRC_DIR}/../clang)
+      set(CLANG_SRC_DIR_PREFIX ..) # sources out-of-tree (ENABLE_PROJECTS build)
+  else ()
+      message(FATAL_ERROR "Cannot find Clang sources")
+  endif ()
 endif()
-message(STATUS "Found LLVM v${LLVM_PACKAGE_VERSION}")
-# add Clang libraries
-include(${LLVM_BUILD_DIR}/lib/cmake/clang/ClangTargets.cmake)
-
-# find Clang source directory
-if (EXISTS ${LLVM_BUILD_MAIN_SRC_DIR}/tools/clang)
-    set(CLANG_SRC_DIR_PREFIX tools) # sources in-tree (default build)
-elseif (EXISTS ${LLVM_BUILD_MAIN_SRC_DIR}/../clang)
-    set(CLANG_SRC_DIR_PREFIX ..) # sources out-of-tree (ENABLE_PROJECTS build)
-else ()
-    message(FATAL_ERROR "Cannot find Clang sources")
-endif ()
 
 
 set(STORAGE_FILES

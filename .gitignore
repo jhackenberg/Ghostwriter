@@ -95,3 +95,6 @@ __pycache__/
 data
 .venv
 .ipynb_checkpoints
+
+result
+.cache

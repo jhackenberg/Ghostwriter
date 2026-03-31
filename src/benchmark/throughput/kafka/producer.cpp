@@ -115,10 +115,7 @@ void ThroughputKafkaProducer::Run()
     {
       std::cout << "Iteration: " << count << " / " << GetRunBatchCount() << std::endl;
     }
-    if (!generated_buffers_p_->pop(buffer))
-    {
-      throw std::runtime_error("Could not pop from generated buffer, queue is empty.");
-    }
+    generated_buffers_p_->pop(buffer);
     RdKafka::ErrorCode resp = producer_p_->produce(std::string("benchmark"), 0, RdKafka::Producer::RK_MSG_BLOCK, buffer, config_.max_batch_size, nullptr, 0, 0, nullptr, buffer);
     if (resp != RdKafka::ERR_NO_ERROR) {
       std::cerr << "Produce failed: " << RdKafka::err2str(resp) << std::endl;

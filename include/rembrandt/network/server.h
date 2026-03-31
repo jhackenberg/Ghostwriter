@@ -8,6 +8,7 @@
 #include "rembrandt/network/ucx/worker.h"
 #include "message_handler.h"
 #include <atomic>
+#include <deque>
 #include <thread>
 #include <memory>
 

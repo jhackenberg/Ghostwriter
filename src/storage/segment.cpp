@@ -1,7 +1,9 @@
 #include "../../include/rembrandt/storage/segment.h"
 
-#include <new>
+#include <cstddef>
 #include <cstdlib>
+#include <new>
+#include <utility>
 
 Segment::Segment(void *location, uint64_t segment_size) {
   segment_header_ = reinterpret_cast<SegmentHeader *>(location);

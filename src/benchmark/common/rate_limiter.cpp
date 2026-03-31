@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <thread>
 #include "rembrandt/benchmark/common/rate_limiter.h"
 
